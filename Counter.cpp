@@ -16,6 +16,10 @@
 #define SPAC (NUMC-1)//空白
 #define LINE -1//新行
 #define BEGI -2//开头
+
+char cOptSpace[3] = SPACE_SYMB;
+char cOptBlock[3] = BLOCK_SYMB;
+
 constexpr static inline const bool Number[NUMC][NUMY][NUMX] =
 {
 	{
@@ -182,11 +186,11 @@ void PrintNum(char cNum)//小于0输出负号，大于9输出换行，否则输�
 		{
 			if (Number[(long)cNum][y][x])
 			{
-				printf(BLOCK_SYMB);
+				printf("%s", cOptBlock);
 			}
 			else
 			{
-				printf(SPACE_SYMB);
+				printf("%s", cOptSpace);
 			}
 		}
 	}
@@ -272,6 +276,30 @@ void WriteValue(const long long &llWrite, FILE *f)
 	fwrite(&llWrite, sizeof(llWrite), 1, f);
 }
 
+void ReadSymb(FILE *f)
+{
+	if (f == NULL)
+	{
+		return;
+	}
+
+	fseek(f, sizeof(long long), SEEK_SET);
+	fread(cOptSpace, sizeof(cOptSpace) - sizeof(cOptSpace[0]), 1, f);
+	fread(cOptBlock, sizeof(cOptBlock) - sizeof(cOptBlock[0]), 1, f);
+}
+
+void WriteSymb(FILE *f)
+{
+	if (f == NULL)
+	{
+		return;
+	}
+
+	fseek(f, sizeof(long long), SEEK_SET);
+	fwrite(cOptSpace, sizeof(cOptSpace) - sizeof(cOptSpace[0]), 1, f);
+	fwrite(cOptBlock, sizeof(cOptBlock) - sizeof(cOptBlock[0]), 1, f);
+}
+
 FILE *OpenDat(const char *pDatName)
 {
 	FILE *f;
@@ -292,7 +320,11 @@ FILE *OpenDat(const char *pDatName)
 			"无法创建数据记录文件，您的计数值不会被保存，\n"
 			"请注意当前程序是否有文件创建和读写等权限\n"
 		);
+		return NULL;
 	}
+
+	WriteValue(0, f);
+	WriteSymb(f);
 
 	return f;
 }
@@ -321,9 +353,11 @@ int main(void)
 	long long llCount = 0;
 	FILE *f = OpenDat("Count.dat");
 	ReadValue(llCount, f);//读取之前的计数值
+	ReadSymb(f);//读取设置的符号输出
 
 	ConsolePause();
 	ConsoleClearScreen();
+	ConsoleShowCursor(false);
 
 	bool bZeroConfirm = false;
 	bool bExitConfirm = false;
