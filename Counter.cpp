@@ -254,17 +254,6 @@ void PrintCount(long long llCount)
 //	return usKeyVal;
 //}
 
-void ReadValue(long long &llRead, FILE *f)
-{
-	if (f == NULL)
-	{
-		return;
-	}
-
-	rewind(f);//恢复到文件开头
-	fread(&llRead, sizeof(llRead), 1, f);
-}
-
 void WriteValue(const long long &llWrite, FILE *f)
 {
 	if (f == NULL)
@@ -276,16 +265,18 @@ void WriteValue(const long long &llWrite, FILE *f)
 	fwrite(&llWrite, sizeof(llWrite), 1, f);
 }
 
-void ReadSymb(FILE *f)
+void ReadValue(long long &llRead, FILE *f)
 {
 	if (f == NULL)
 	{
 		return;
 	}
 
-	fseek(f, sizeof(long long), SEEK_SET);
-	fread(cOptSpace, sizeof(cOptSpace) - sizeof(cOptSpace[0]), 1, f);
-	fread(cOptBlock, sizeof(cOptBlock) - sizeof(cOptBlock[0]), 1, f);
+	rewind(f);//恢复到文件开头
+	if (fread(&llRead, sizeof(llRead), 1, f) != 1)
+	{
+		WriteValue(llRead, f);
+	}
 }
 
 void WriteSymb(FILE *f)
@@ -298,6 +289,21 @@ void WriteSymb(FILE *f)
 	fseek(f, sizeof(long long), SEEK_SET);
 	fwrite(cOptSpace, sizeof(cOptSpace) - sizeof(cOptSpace[0]), 1, f);
 	fwrite(cOptBlock, sizeof(cOptBlock) - sizeof(cOptBlock[0]), 1, f);
+}
+
+void ReadSymb(FILE *f)
+{
+	if (f == NULL)
+	{
+		return;
+	}
+
+	fseek(f, sizeof(long long), SEEK_SET);
+	if (fread(cOptSpace, sizeof(cOptSpace) - sizeof(cOptSpace[0]), 1, f) != 1 ||
+		fread(cOptBlock, sizeof(cOptBlock) - sizeof(cOptBlock[0]), 1, f) != 1)
+	{
+		WriteSymb(f);
+	}
 }
 
 FILE *OpenDat(const char *pDatName)
@@ -344,8 +350,8 @@ int main(void)
 		"=================\n"
 		"加一 -> Space/LMB\n"
 		"减一 -> Backspace/RMB\n"
+		"清零 -> Delete/MMB\n"
 		"修改 -> Enter\n"
-		"清零 -> Delete\n"
 		"退出 -> Esc\n"
 		"=================\n"
 	);
@@ -362,7 +368,7 @@ int main(void)
 	bool bZeroConfirm = false;
 	bool bExitConfirm = false;
 	bool bChange = false;
-	bool bMLB = false, bMRB = false;
+	bool bLMB = false, bMMB = false, bRMB = false;
 	//绘制数值
 	PrintCount(llCount);
 	while (true)
@@ -377,23 +383,35 @@ int main(void)
 		{
 			if ((ir.Event.MouseEvent.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) == FROM_LEFT_1ST_BUTTON_PRESSED)
 			{
-				bMLB = true;
+				bLMB = true;
 			}
-			else if ((ir.Event.MouseEvent.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) == 0 && bMLB == true)
+			else if ((ir.Event.MouseEvent.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) == 0 && bLMB == true)
 			{
-				bMLB = false;
+				bLMB = false;
 				ir.EventType = KEY_EVENT;
 				ir.Event.KeyEvent.bKeyDown = false;
 				ir.Event.KeyEvent.wVirtualKeyCode = VK_SPACE;
 			}
 
+			if ((ir.Event.MouseEvent.dwButtonState & FROM_LEFT_2ND_BUTTON_PRESSED) == FROM_LEFT_2ND_BUTTON_PRESSED)
+			{
+				bMMB = true;
+			}
+			else if ((ir.Event.MouseEvent.dwButtonState & FROM_LEFT_2ND_BUTTON_PRESSED) == 0 && bMMB == true)
+			{
+				bMMB = false;
+				ir.EventType = KEY_EVENT;
+				ir.Event.KeyEvent.bKeyDown = false;
+				ir.Event.KeyEvent.wVirtualKeyCode = VK_DELETE;
+			}
+
 			if ((ir.Event.MouseEvent.dwButtonState & RIGHTMOST_BUTTON_PRESSED) == RIGHTMOST_BUTTON_PRESSED)
 			{
-				bMRB = true;
+				bRMB = true;
 			}
-			else if ((ir.Event.MouseEvent.dwButtonState & RIGHTMOST_BUTTON_PRESSED) == 0 && bMRB == true)
+			else if ((ir.Event.MouseEvent.dwButtonState & RIGHTMOST_BUTTON_PRESSED) == 0 && bRMB == true)
 			{
-				bMRB = false;
+				bRMB = false;
 				ir.EventType = KEY_EVENT;
 				ir.Event.KeyEvent.bKeyDown = false;
 				ir.Event.KeyEvent.wVirtualKeyCode = VK_BACK;
@@ -442,7 +460,7 @@ int main(void)
 				else
 				{
 					bZeroConfirm = true;
-					printf("请再次键入DEL以确认清零\n");
+					printf("请再次键入DEL/MMB以确认清零\n");
 					continue;//跳过后面设置为false的语句再次等待输入
 				}
 				break;
