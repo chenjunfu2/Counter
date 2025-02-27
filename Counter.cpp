@@ -232,27 +232,88 @@ void PrintCount(long long llCount)
 	PrintNum(LINE);//换行
 }
 
-//unsigned short GetKeyVal(void)
-//{
-//	unsigned short usKeyVal = 0;
-//	unsigned char ucGet = _getch();
-//	if (ucGet == 0x00)
-//	{
-//		ucGet = _getch();//reget
-//		usKeyVal = 0x00 << 8 | ucGet;
-//	}
-//	else if (ucGet == 0xE0)
-//	{
-//		ucGet = _getch();//reget
-//		usKeyVal = 0xE0 << 8 | ucGet;
-//	}
-//	else
-//	{
-//		usKeyVal = 0xFF << 8 | ucGet;
-//	}
-//
-//	return usKeyVal;
-//}
+
+void ClearInput(void)
+{
+	while (getchar() != '\n') continue;
+}
+
+void GetInputLine(char *pcLine, size_t szSize)
+{
+	while (true)
+	{
+		int c = getchar();
+		if (c == '\n')
+		{
+			break;
+		}
+
+		int i;
+		for (i = 0; i < szSize - 1; ++i)
+		{
+			pcLine[i] = c;
+			if ((c = getchar()) == '\n')
+			{
+				++i;
+				break;
+			}
+		}
+
+		pcLine[i] = '\0';
+
+		if (c != '\n')
+		{
+			ClearInput();//清空缓冲区
+		}
+
+		break;
+	}
+}
+
+void GetInputVal(long long *pLLVal)
+{
+	while (true)
+	{
+		long long llNew = 0;
+		if (scanf("%lld", &llNew) != 1)
+		{
+			int c = getchar();
+			if (c == 'q' || c == 'Q')
+			{
+				break;
+			}
+			else
+			{
+				printf("输入错误，请重新输入:");
+				if (c != '\n')
+				{
+					ClearInput();//清空缓冲区
+				}
+				continue;
+			}
+		}
+
+		*pLLVal = llNew;
+		break;
+	}
+
+	ClearInput();//清空缓冲区
+}
+
+void SetInputMod(bool bIpt)
+{
+	//设置屏幕模式、光标
+	if (bIpt)
+	{
+		SetConsoleMode(hi, ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_EXTENDED_FLAGS | ENABLE_QUICK_EDIT_MODE);
+		ConsoleShowCursor(true);
+	}
+	else
+	{
+		ConsoleShowCursor(false);
+		SetConsoleMode(hi, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT | ENABLE_EXTENDED_FLAGS);
+	}
+}
 
 void WriteValue(const long long &llWrite, FILE *f)
 {
@@ -436,101 +497,27 @@ int main(void)
 				--llCount;
 				break;
 			case VK_CONTROL://CTRL 设置输出
-				//设置屏幕模式、光标
-				SetConsoleMode(hi, ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_EXTENDED_FLAGS | ENABLE_QUICK_EDIT_MODE);
-				ConsoleShowCursor(true);
+				SetInputMod(true);
+
 				printf("请输入空白字符（最大%d，超出截断，直接回车取消修改）:", sizeof(cOptSpace) - 1);
-				while (true)
-				{
-					int c = getchar();
-					if (c == '\n')
-					{
-						break;
-					}
-
-					int i;
-					for (i = 0; i < sizeof(cOptSpace) - 1; ++i)
-					{
-						cOptSpace[i] = c;
-						if ((c = getchar()) == '\n')
-						{
-							++i;
-							break;
-						}
-					}
-
-					cOptSpace[i] = '\0';
-					break;
-				}
-				FlushConsoleInputBuffer(hi);//清空缓冲区
+				GetInputLine(cOptSpace, sizeof(cOptSpace));
 
 				printf("请输入方块字符（最大%d，超出截断，直接回车取消修改）:", sizeof(cOptBlock) - 1);
-				while (true)
-				{
-					int c = getchar();
-					if (c == '\n')
-					{
-						break;
-					}
+				GetInputLine(cOptBlock, sizeof(cOptBlock));
 
-					int i;
-					for (i = 0; i < sizeof(cOptBlock) - 1; ++i)
-					{
-						cOptBlock[i] = c;
-						if ((c = getchar()) == '\n')
-						{
-							++i;
-							break;
-						}
-					}
+				WriteSymb(f);//写入到文件
 
-					cOptBlock[i] = '\0';
-					break;
-				}
-				FlushConsoleInputBuffer(hi);//清空缓冲区
-
-				//写入到文件
-				WriteSymb(f);
-
-				//设置光标、清屏、设置屏幕模式
-				ConsoleShowCursor(false);
 				ConsoleClearScreen();
-				SetConsoleMode(hi, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT | ENABLE_EXTENDED_FLAGS);
+				SetInputMod(false);
 				break;
 			case VK_RETURN://回车 输入
-				//设置屏幕模式、光标
-				SetConsoleMode(hi, ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_EXTENDED_FLAGS | ENABLE_QUICK_EDIT_MODE);
-				ConsoleShowCursor(true);
+				SetInputMod(true);
+
 				printf("请输入数值（输入q取消修改）:");
-				while (true)
-				{
-					long long llNew = 0;
-					if (scanf("%lld", &llNew) != 1)
-					{
-						int c = getchar();
-						if (c == 'q' || c == 'Q')
-						{
-							FlushConsoleInputBuffer(hi);//清空缓冲区
-							break;
-						}
-						else
-						{
-							printf("输入错误，请重新输入:");
-							FlushConsoleInputBuffer(hi);//清空缓冲区
-							continue;
-						}
-					}
+				GetInputVal(&llCount);
 
-					llCount = llNew;
-					break;
-				}
-
-				FlushConsoleInputBuffer(hi);//清空缓冲区
-
-				//设置光标、清屏、设置屏幕模式
-				ConsoleShowCursor(false);
 				ConsoleClearScreen();
-				SetConsoleMode(hi, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT | ENABLE_EXTENDED_FLAGS);
+				SetInputMod(false);
 				break;
 			case VK_DELETE://DEL 清零
 				if (bZeroConfirm)
