@@ -436,10 +436,39 @@ int main(void)
 	bool bExitConfirm = false;
 	bool bChange = false;
 	bool bLMB = false, bMMB = false, bRMB = false;
+	enum : int
+	{
+		Space,
+		Backspace,
+		Delete,
+		Enter,
+		Ctrl,
+		Esc,
+		End,
+	};
+
+	bool bKeyStatus[End] = {};
+
+#define TEST_KEY(KEY) \
+	if (ir.Event.KeyEvent.bKeyDown)\
+	{\
+		bKeyStatus[KEY] = true;\
+		goto ReInput;\
+	}\
+	else\
+	{\
+		if (bKeyStatus[KEY] != true)/*只有弹起没有按下，跳过处理*/\
+		{\
+			goto ReInput;\
+		}\
+		bKeyStatus[KEY] = false;\
+	}\
+
 	//绘制数值
 	PrintCount(llCount);
 	while (true)
 	{
+	ReInput:
 		//等待输入
 		INPUT_RECORD ir;
 		DWORD tmp;
@@ -455,6 +484,7 @@ int main(void)
 			else if ((ir.Event.MouseEvent.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) == 0 && bLMB == true)
 			{
 				bLMB = false;
+				bKeyStatus[Space] = true;
 				ir.EventType = KEY_EVENT;
 				ir.Event.KeyEvent.bKeyDown = false;
 				ir.Event.KeyEvent.wVirtualKeyCode = VK_SPACE;
@@ -467,6 +497,7 @@ int main(void)
 			else if ((ir.Event.MouseEvent.dwButtonState & FROM_LEFT_2ND_BUTTON_PRESSED) == 0 && bMMB == true)
 			{
 				bMMB = false;
+				bKeyStatus[Delete] = true;
 				ir.EventType = KEY_EVENT;
 				ir.Event.KeyEvent.bKeyDown = false;
 				ir.Event.KeyEvent.wVirtualKeyCode = VK_DELETE;
@@ -479,24 +510,29 @@ int main(void)
 			else if ((ir.Event.MouseEvent.dwButtonState & RIGHTMOST_BUTTON_PRESSED) == 0 && bRMB == true)
 			{
 				bRMB = false;
+				bKeyStatus[Backspace] = true;
 				ir.EventType = KEY_EVENT;
 				ir.Event.KeyEvent.bKeyDown = false;
 				ir.Event.KeyEvent.wVirtualKeyCode = VK_BACK;
 			}
 		}
 
-		if (ir.EventType == KEY_EVENT && ir.Event.KeyEvent.bKeyDown == false)//keyup才处理
+		if (ir.EventType == KEY_EVENT)
 		{
 			bChange = true;//假设有修改
 			switch (ir.Event.KeyEvent.wVirtualKeyCode)
 			{
 			case VK_SPACE://空格 加一
+				TEST_KEY(Space);
+				//keyup才处理
 				++llCount;
 				break;
 			case VK_BACK://退格 减一
+				TEST_KEY(Backspace);
 				--llCount;
 				break;
 			case VK_CONTROL://CTRL 设置输出
+				TEST_KEY(Ctrl);
 				SetInputMod(true);
 
 				printf("请输入空白字符（最大%d，超出截断，直接回车取消修改）:", sizeof(cOptSpace) - 1);
@@ -511,6 +547,7 @@ int main(void)
 				SetInputMod(false);
 				break;
 			case VK_RETURN://回车 输入
+				TEST_KEY(Enter);
 				SetInputMod(true);
 
 				printf("请输入数值（输入q取消修改）:");
@@ -520,6 +557,7 @@ int main(void)
 				SetInputMod(false);
 				break;
 			case VK_DELETE://DEL 清零
+				TEST_KEY(Delete);
 				if (bZeroConfirm)
 				{
 					llCount = 0;
@@ -532,6 +570,7 @@ int main(void)
 				}
 				break;
 			case VK_ESCAPE://ESC 退出
+				TEST_KEY(Esc);
 				if (bExitConfirm)
 				{
 					return 0;
@@ -544,7 +583,12 @@ int main(void)
 				}
 				break;
 			default:
-				bChange = false;//实际上并没有，假设失败
+				if (ir.Event.KeyEvent.bKeyDown)//按下消息，直接跳出
+				{
+					goto ReInput;
+				}
+
+				bChange = false;//实际上并没有改变值，假设失败
 				break;
 			}
 
