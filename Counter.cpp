@@ -17,8 +17,8 @@
 #define LINE -1//新行
 #define BEGI -2//开头
 
-char cOptSpace[3] = SPACE_SYMB;
-char cOptBlock[3] = BLOCK_SYMB;
+char cOptSpace[32] = SPACE_SYMB;
+char cOptBlock[32] = BLOCK_SYMB;
 
 constexpr static inline const bool Number[NUMC][NUMY][NUMX] =
 {
@@ -275,6 +275,8 @@ void ReadValue(long long &llRead, FILE *f)
 	rewind(f);//恢复到文件开头
 	if (fread(&llRead, sizeof(llRead), 1, f) != 1)
 	{
+		llRead = 0;
+
 		WriteValue(llRead, f);
 	}
 }
@@ -287,8 +289,8 @@ void WriteSymb(FILE *f)
 	}
 
 	fseek(f, sizeof(long long), SEEK_SET);
-	fwrite(cOptSpace, sizeof(cOptSpace) - sizeof(cOptSpace[0]), 1, f);
-	fwrite(cOptBlock, sizeof(cOptBlock) - sizeof(cOptBlock[0]), 1, f);
+	fwrite(cOptSpace, sizeof(cOptSpace) - 1, 1, f);
+	fwrite(cOptBlock, sizeof(cOptBlock) - 1, 1, f);
 }
 
 void ReadSymb(FILE *f)
@@ -299,9 +301,12 @@ void ReadSymb(FILE *f)
 	}
 
 	fseek(f, sizeof(long long), SEEK_SET);
-	if (fread(cOptSpace, sizeof(cOptSpace) - sizeof(cOptSpace[0]), 1, f) != 1 ||
-		fread(cOptBlock, sizeof(cOptBlock) - sizeof(cOptBlock[0]), 1, f) != 1)
+	if (fread(cOptSpace, sizeof(cOptSpace) - 1, 1, f) != 1 ||
+		fread(cOptBlock, sizeof(cOptBlock) - 1, 1, f) != 1)
 	{
+		strcpy(cOptSpace, SPACE_SYMB);
+		strcpy(cOptBlock, BLOCK_SYMB);
+
 		WriteSymb(f);
 	}
 }
@@ -351,7 +356,8 @@ int main(void)
 		"加一 -> Space/LMB\n"
 		"减一 -> Backspace/RMB\n"
 		"清零 -> Delete/MMB\n"
-		"修改 -> Enter\n"
+		"改值 -> Enter\n"
+		"设置 -> Ctrl\n"
 		"退出 -> Esc\n"
 		"=================\n"
 	);
@@ -429,28 +435,102 @@ int main(void)
 			case VK_BACK://退格 减一
 				--llCount;
 				break;
-			case VK_RETURN://回车 输入
-				printf("请输入数值:");
+			case VK_CONTROL://CTRL 设置输出
+				//设置屏幕模式、光标
+				SetConsoleMode(hi, ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_EXTENDED_FLAGS | ENABLE_QUICK_EDIT_MODE);
+				ConsoleShowCursor(true);
+				printf("请输入空白字符（最大%d，超出截断，直接回车取消修改）:", sizeof(cOptSpace) - 1);
 				while (true)
 				{
-					SetConsoleMode(hi, ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_EXTENDED_FLAGS | ENABLE_QUICK_EDIT_MODE);
-					ConsoleShowCursor(true);
-					long long llNew = 0;
-					int iRet = scanf("%lld", &llNew);
-					while (getchar() != '\n') continue;
-					ConsoleShowCursor(false);
-					SetConsoleMode(hi, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT | ENABLE_EXTENDED_FLAGS);
-
-					if (iRet != 1)
+					int c = getchar();
+					if (c == '\n')
 					{
-						printf("输入错误，请重新输入:");
-						continue;
+						break;
+					}
+
+					int i;
+					for (i = 0; i < sizeof(cOptSpace) - 1; ++i)
+					{
+						cOptSpace[i] = c;
+						if ((c = getchar()) == '\n')
+						{
+							++i;
+							break;
+						}
+					}
+
+					cOptSpace[i] = '\0';
+					break;
+				}
+				FlushConsoleInputBuffer(hi);//清空缓冲区
+
+				printf("请输入方块字符（最大%d，超出截断，直接回车取消修改）:", sizeof(cOptBlock) - 1);
+				while (true)
+				{
+					int c = getchar();
+					if (c == '\n')
+					{
+						break;
+					}
+
+					int i;
+					for (i = 0; i < sizeof(cOptBlock) - 1; ++i)
+					{
+						cOptBlock[i] = c;
+						if ((c = getchar()) == '\n')
+						{
+							++i;
+							break;
+						}
+					}
+
+					cOptBlock[i] = '\0';
+					break;
+				}
+				FlushConsoleInputBuffer(hi);//清空缓冲区
+
+				//写入到文件
+				WriteSymb(f);
+
+				//设置光标、清屏、设置屏幕模式
+				ConsoleShowCursor(false);
+				ConsoleClearScreen();
+				SetConsoleMode(hi, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT | ENABLE_EXTENDED_FLAGS);
+				break;
+			case VK_RETURN://回车 输入
+				//设置屏幕模式、光标
+				SetConsoleMode(hi, ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_EXTENDED_FLAGS | ENABLE_QUICK_EDIT_MODE);
+				ConsoleShowCursor(true);
+				printf("请输入数值（输入q取消修改）:");
+				while (true)
+				{
+					long long llNew = 0;
+					if (scanf("%lld", &llNew) != 1)
+					{
+						int c = getchar();
+						if (c == 'q' || c == 'Q')
+						{
+							FlushConsoleInputBuffer(hi);//清空缓冲区
+							break;
+						}
+						else
+						{
+							printf("输入错误，请重新输入:");
+							FlushConsoleInputBuffer(hi);//清空缓冲区
+							continue;
+						}
 					}
 
 					llCount = llNew;
-					ConsoleClearScreen();
 					break;
 				}
+
+				FlushConsoleInputBuffer(hi);//清空缓冲区
+
+				//设置光标、清屏、设置屏幕模式
+				ConsoleShowCursor(false);
+				ConsoleClearScreen();
+				SetConsoleMode(hi, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT | ENABLE_EXTENDED_FLAGS);
 				break;
 			case VK_DELETE://DEL 清零
 				if (bZeroConfirm)
