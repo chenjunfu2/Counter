@@ -458,7 +458,7 @@ int main(void)
 		Backspace,
 		Delete,
 		Enter,
-		Ctrl,
+		S,
 		Esc,
 		End,
 	};
@@ -548,7 +548,7 @@ int main(void)
 				--llCount;
 				break;
 			case 0x53://0x53 S 设置输出
-				TEST_KEY(Ctrl);
+				TEST_KEY(S);
 				SetInputMod(true);
 
 				printf("请输入空白字符（最大%d，超出截断，直接回车取消修改）:", sizeof(cOptSpace) - 1);
