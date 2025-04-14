@@ -153,10 +153,27 @@ void ConsolePause(void)
 	//等待输入
 	INPUT_RECORD ir;
 	DWORD tmp;
-	do
+	while(true)
 	{
+		//读取信息直到符合要求
 		ReadConsoleInputA(hi, &ir, 1, &tmp);
-	} while (ir.EventType != KEY_EVENT || ir.Event.KeyEvent.bKeyDown != false);
+		if (ir.EventType == WINDOW_BUFFER_SIZE_EVENT)//窗口改变，重新隐藏光标
+		{
+			ConsoleShowCursor(false);
+		}
+		else if (ir.EventType == KEY_EVENT && ir.Event.KeyEvent.bKeyDown == true)//按下任意键盘按键
+		{
+			break;
+		}
+		else if (ir.EventType == MOUSE_EVENT && ir.Event.MouseEvent.dwEventFlags == 0 && ir.Event.MouseEvent.dwButtonState != 0)//按下任意鼠标按键
+		{
+			break;
+		}
+		else
+		{
+			continue;
+		}
+	}
 }
 
 
@@ -414,11 +431,11 @@ int main(void)
 	printf(
 		"简易计数器\n"
 		"=================\n"
-		"加一 -> Space/LMB\n"
-		"减一 -> Backspace/RMB\n"
-		"清零 -> Delete/MMB\n"
+		"加一 -> Space/Mouse Left Button\n"
+		"减一 -> Backspace/Mouse Right Button\n"
+		"清零 -> Delete/Mouse Middle Button\n"
 		"改值 -> Enter\n"
-		"设置 -> Ctrl\n"
+		"设置 -> S\n"
 		"退出 -> Esc\n"
 		"=================\n"
 	);
@@ -430,7 +447,6 @@ int main(void)
 
 	ConsolePause();
 	ConsoleClearScreen();
-	ConsoleShowCursor(false);
 
 	bool bZeroConfirm = false;
 	bool bExitConfirm = false;
@@ -531,7 +547,7 @@ int main(void)
 				TEST_KEY(Backspace);
 				--llCount;
 				break;
-			case VK_CONTROL://CTRL 设置输出
+			case 0x53://0x53 S 设置输出
 				TEST_KEY(Ctrl);
 				SetInputMod(true);
 
@@ -565,7 +581,7 @@ int main(void)
 				else
 				{
 					bZeroConfirm = true;
-					printf("请再次键入DEL/MMB以确认清零\n");
+					printf("请再次键入DEL/Mouse Middle Button以确认清零\n");
 					continue;//跳过后面设置为false的语句再次等待输入
 				}
 				break;
