@@ -161,7 +161,7 @@ void ConsolePause(void)
 		{
 			ConsoleShowCursor(false);
 		}
-		else if (ir.EventType == KEY_EVENT && ir.Event.KeyEvent.bKeyDown == true)//按下任意键盘按键
+		else if (ir.EventType == KEY_EVENT && (bool)ir.Event.KeyEvent.bKeyDown == true)//按下任意键盘按键
 		{
 			break;
 		}
@@ -265,7 +265,7 @@ void GetInputLine(char *pcLine, size_t szSize)
 			break;
 		}
 
-		int i;
+		size_t i;
 		for (i = 0; i < szSize - 1; ++i)
 		{
 			pcLine[i] = c;
