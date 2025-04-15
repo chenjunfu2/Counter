@@ -614,6 +614,10 @@ int main(void)
 				bZeroConfirm = false;
 				bExitConfirm = false;
 				ConsoleClearScreen();//清屏
+				if (!bChange)//如果没有改变值则自己重绘一下，否则由下方重绘
+				{
+					PrintCount(llCount);
+				}
 			}
 
 			if (bChange)
